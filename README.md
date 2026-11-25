@@ -17,6 +17,7 @@ Each one covers enumeration, exploitation and privilege escalation. Flags and cr
 
 | Lab | OS | Difficulty | Techniques |
 |---|---|---|---|
+| [Active Directory lab](active-directory-lab/) | Windows (AD) | Medium | File-upload RCE, SOCKS pivoting, Pass-the-Hash, Kerberoasting, DCSync, Domain Admin |
 | [Windows Server 2008 R2 Bootcamp](windows-2008-bootcamp/) | Windows | — | EternalBlue (MS17-010), Meterpreter, hash dumping, John the Ripper |
 
 Only retired machines are published, in line with the Hack The Box rules.
