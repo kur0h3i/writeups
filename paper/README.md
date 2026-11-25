@@ -2,71 +2,47 @@
 
 | OS | Difficulty | Techniques |
 |---|---|---|
-| Linux | Easy | Virtual host discovery, WordPress CVE-2019-17671, chat bot abuse, Polkit CVE-2021-3560 |
+| Linux (CentOS) | Easy | Virtual host discovery, WordPress CVE-2019-17671, chat bot abuse, Polkit CVE-2021-3560 |
 
-## Enumeracion
-Tiramos un nmap basico para poder observar que puertos hay abiertos, de ahi
-descubrimos el puerto 22 (ssh), 80 (http) y 443 (https)
+## Enumeración
 
-Una vez sabemos cuales son los posibles puertos vamos a indagar en sus
-versiones y usar los scripts default.
-localhost.localdomain   en un CN
-Indica un certificado auto-firmado con la configuración por defecto de la distro.
-No aporta información sobre el hostname real del servidor.
+Un escaneo básico con `nmap` muestra los puertos **22** (SSH), **80** (HTTP) y **443** (HTTPS). Después lanzo el escaneo de versiones con los scripts por defecto.
 
- En la pagina principal al entrar tanto por http o https vemos la Test Page de
-Apache/CentOS
-Es la página por defecto que sirve Apache cuando se instala pero no se ha
-configurado contenido para el sitio principal. Significa que en la raíz del
-servidor no hay una web "de verdad" — solo el placeholder de bienvenida.
+- El certificado HTTPS es autofirmado y tiene `localhost.localdomain` como CN. Es la configuración por defecto de la distribución y no revela el hostname real.
+- Tanto por HTTP como por HTTPS aparece la *Test Page* de Apache/CentOS: el servidor no tiene una web real en la raíz, solo la página de bienvenida.
 
- Hacemos un curl -I a la IP para que nos devuelva las cabeceras HTTP sin el
-cuerpo de la respuesta. En este caso descubrimos la cabecera X-Backend-Server:
-office.paper , que nos revela un hostname interno que Apache está usando por
+Con `curl -I` sobre la IP leo las cabeceras HTTP sin el cuerpo. Aparece la cabecera:
 
-detrás.
+```
+X-Backend-Server: office.paper
+```
 
-Añado este vhost a la lista de hosts
+Es un hostname interno que Apache usa por detrás. Lo añado a `/etc/hosts` y encuentro una web nueva en `http://office.paper/`.
 
-Encontramos una pagina nueva en http://office.paper/
+## Pre-explotación
 
-## Pre-Explotacion
-He encontrado un panel de admin de wordpress bsucando por la web asique
-vamos a buscar que version de wordpress corre
+Buscando por la web encuentro el panel de administración de WordPress, así que averiguo qué versión corre.
 
-Vamos a usar el CVE-2019-17671 que nos va a permitir leer drafts que no se
-muestra a simple vista en los mensajes del blog gracias a abusar del static.
+Esa versión es vulnerable al **CVE-2019-17671**, que permite leer *drafts* que no se muestran en el blog abusando del parámetro `static`:
+
+```
 http://office.paper/?static=1
+```
 
- Si leemos con atencion nos dice que hay otro vhost que seria el
-chat.office.paper
+Leyendo los borradores con atención, uno menciona otro virtual host: `chat.office.paper`. Lo añado también a `/etc/hosts`, me creo una cuenta y entro al chat.
 
-Agregamos dentro de etc/hosts
+Dentro del chat hay un bot, **recyclops**, con el que se puede interactuar.
 
-Me creo una cuenta y entro al chat
+## Explotación
 
-Dento del chat leo que hay un bot con el que se puede interactuar llamado
-recyclops
+Con el bot puedo moverme por los directorios y localizar los ficheros del propio bot. En su `.env`, que es donde guarda la información sensible, obtengo credenciales que me dan acceso por **SSH** a la máquina. Ahí consigo la primera flag.
 
-## Explotacion
-Usando le bot y moviendome a traves de los directrorios encuentro donde se
-encuentra los archivos del bot
+## Post-explotación
 
-Saco el .env que es donde esta la información sensible
+Busco versiones de `polkit` y encuentro un CVE asociado: **CVE-2021-3560** (escalada de privilegios en Polkit). Lo explotamos con este PoC:
 
- Y logro un acceso por ssh dentro de la maquina y obtengo la primera flag
+- <https://github.com/secnigma/CVE-2021-3560-Polkit-Privilege-Esclation>
 
-## Post-Explotacion
-He buscado el polkit
+Con el usuario creado por el exploit puedo entrar como `sudo`, obtengo **root** y leo la flag.
 
-He buscado un CVE asociado al polkit que en este caso es el CVE-2021-3560
-
- Lo explotmos usando este poc : https://github.com/secnigma/CVE-2021-3560-Polkit-Privilege-Esclation
-
-Usamos el usuario al que hemos cambiado para poder entrar como sudo
-
-Obtenemos root
-
-Obtenemos la flag
-
- PWNED!
+**PWNED!**

@@ -5,6 +5,7 @@
 | Linux | Easy | SQL injection, hash cracking, SSTI (Jinja2) to RCE, Docker container escape, credential reuse |
 
 ## Enumeración
+
 Lanzo un escaneo completo de puertos con nmap para ver qué servicios están
 expuestos:
 
@@ -26,7 +27,8 @@ página es GoodGames | Community and Store .
 echo "10.129.54.15 goodgames.htb" | sudo tee -a /etc/hosts
 ```
 
-## Pre-Explotación
+## Pre-explotación
+
 Inspeccionando el formulario de login, pruebo una inyección SQL básica de
 bypass de autenticación en el campo email:
 
@@ -43,7 +45,9 @@ están sólo en el frontend y el backend acepta cualquier cosa.
 Efectivamente, con el payload de bypass entro como usuario admin.
 
 ## Explotación
-## SQL Injection con sqlmap
+
+### SQL Injection con sqlmap
+
 Guardo la petición del login en un fichero login.req (con un email válido en el
 body, sin payloads — de eso ya se encarga sqlmap) y lanzo sqlmap para
 enumerar bases de datos:
@@ -74,13 +78,15 @@ no puede leer la salida de la inyección UNION.
 ```
 Obtengo el hash de la contraseña del admin.
 
-## Crackeo del hash
+### Crackeo del hash
+
 El hash es de tipo MD5 (32 caracteres hex, sin salt). Lo paso por CrackStation
 y sale al momento:
 
  La contraseña es <redacted> .
 
-## Acceso al panel interno
+### Acceso al panel interno
+
 Autenticándome como admin en la web con esas credenciales, descubro un
 panel de administración en un nuevo subdominio: internal-administration.goodgames.htb . Lo añado a /etc/hosts :
 
@@ -91,7 +97,8 @@ sudo sed -i 's/goodgames.htb/goodgames.htb internal-administration.goodgames.htb
 En el subdominio hay un login de Flask Volt Dashboard. Pruebo reutilización de
 credenciales ( admin / <redacted> ) — funciona.
 
-## SSTI (Server-Side Template Injection)
+### SSTI (Server-Side Template Injection)
+
 En la página de settings puedo editar mi perfil. Como la app es Flask (Jinja2),
 pruebo la carga útil clásica de SSTI en el campo Full Name:
 
@@ -110,7 +117,8 @@ expresión. Confirmado SSTI en Jinja2.
 
 Compruebo que ejecuto comandos como root.
 
-## Reverse shell
+### Reverse shell
+
 Codifico la reverse shell en base64 para evitar problemas con caracteres
 especiales:
 
@@ -142,8 +150,10 @@ stty raw -echo; fg
 export TERM=xterm-256color
 ```
 
-## Post-Explotación
-## Reconocimiento del contenedor
+## Post-explotación
+
+### Reconocimiento del contenedor
+
 Al listar /home/augustus observo que el propietario aparece como UID 1000 en
 lugar de un nombre — pista de que el directorio está montado desde el host
 dentro del contenedor.
@@ -151,7 +161,8 @@ dentro del contenedor.
 Confirmo con mount : /home/augustus , /etc/hostname , /etc/hosts y /etc/resolv.conf
 están montados en modo rw desde el disco del host.
 
-## Descubrimiento del host
+### Descubrimiento del host
+
 La IP del contenedor es 172.19.0.2 . Por convención, Docker asigna la primera IP
 de la subred al host, así que asumo 172.19.0.1 . Como no tengo nmap , uso un
 bucle bash para escanear puertos:
@@ -162,7 +173,8 @@ for PORT in {0..1000}; do timeout 1 bash -c "</dev/tcp/172.19.0.1/$PORT" 2>/dev/
 
 Encuentro SSH (22) y HTTP (80) abiertos en el host.
 
-## Movimiento lateral por reutilización de credenciales
+### Movimiento lateral por reutilización de credenciales
+
 Pruebo SSH al host como augustus con la contraseña <redacted> (misma
 que la del panel):
 
@@ -173,7 +185,8 @@ ssh -o StrictHostKeyChecking=no augustus@172.19.0.1
 Funciona — reutilización de contraseñas. Ya estoy en el host como usuario
 augustus , y con esto obtengo la user flag en /home/augustus/user.txt .
 
-## Escalada de privilegios: Docker Escape
+### Escalada de privilegios: Docker Escape
+
 Idea: en el contenedor soy root; en el host soy augustus . El directorio
  /home/augustus está compartido entre ambos. Si desde el contenedor coloco un
 
