@@ -2,7 +2,7 @@
 
 | Entorno | Dificultad | Técnicas |
 |---|---|---|
-| Laboratorio AD simulado (`utad.local`, DC con Windows Server 2012 R2) | Medium | Subida de ficheros con bypass, pivoting SOCKS (NeoReGeorg), SUID, Pass-the-Hash, Kerberoasting, DCSync, RDP con hash |
+| Laboratorio AD simulado (`utad.local`, DC con Windows Server 2012 R2) | — | Subida de ficheros con bypass, pivoting SOCKS (NeoReGeorg), SUID, Pass-the-Hash, Kerberoasting, DCSync, RDP con hash |
 
 > Laboratorio de la universidad, ficticio y ya inexistente. Los secretos (hashes y contraseñas) aparecen como marcadores.
 
